@@ -256,12 +256,12 @@ finally{
  * @swagger
  * /company/{id}:
  *    patch:
- *      description: Update record partially to food table
+ *      description: Update record partially to company table
  *      produces:
  *          - application/json
  *      responses:
  *          200:
- *              description: Updated data to food table
+ *              description: Updated data to company table
  *          500:
  *              Server Error
  *      parameters:
