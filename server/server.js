@@ -177,7 +177,7 @@ app.get('/student',cacheMiddleware(30), async(req,res)=>{
 /**
  * @swagger
  * definitions:
- *   Company:
+ *   Company1:
  *     properties:
  *       COMPANY_ID:
  *         type: string
@@ -190,30 +190,40 @@ app.get('/student',cacheMiddleware(30), async(req,res)=>{
  * @swagger
  * /addCompany:
  *    post:
- *      description: add record to food table
+ *      description: add record to company table
  *      produces:
  *          - application/json
  *      responses:
  *          200:
- *              description: Added data to food table
+ *              description: Added data to company table
  *          500:
  *              description: Server Error
+ *          400:
+ *              description: Error from parameters
  *      parameters:
  *          - name: Company
  *            description: Company object
  *            in: body
  *            required: true
  *            schema:
- *              $ref: '#/definitions/Company'
+ *              $ref: '#/definitions/Company1'
  *
  */
 
  
 app.post('/addCompany',[check('COMPANY_ID','Company ID is required').not().isEmpty().trim(),
-                  check('COMPANY_NAME').trim(),
-                  check('COMPANY_CITY').trim()],async (req,res)=>{
+                  check('COMPANY_ID').isAlphanumeric()
+    .withMessage('The Company Id should only be Alphanumeric').isLength({max:5}).withMessage("Company Id should have maximum 6 characters"),
+    check('COMPANY_NAME').isAlphanumeric()
+    .withMessage('Company NAME should only be Alphanumeric').isLength({max:30}).withMessage("Company Name should have maximum 30 characters"),
+    check('COMPANY_CITY').isAlphanumeric()
+    .withMessage('COMPANY CITY should only be Alphanumeric').isLength({max:30}).withMessage("COMPANY CITY should have maximum 30 characters")],async (req,res)=>{
     let conn;
-   console.log(req.body)
+   const errors=validationResult(req);
+    if(!errors.isEmpty()){
+        return res.status(400).json({errors:errors.array()});
+    }
+
     const {COMPANY_ID,COMPANY_NAME,COMPANY_CITY}=req.body
 
     try{
@@ -267,8 +277,15 @@ finally{
  *            type: string       
  */
 
-app.patch('/company/:id',async (req,res)=>{
+app.patch('/company/:id',[ check('id','Company ID is required').not().isEmpty().trim(),
+    check('id').isAlphanumeric()
+    .withMessage('Company Id should only be Alphanumeric').isLength({max:5}).withMessage("Company Id should have maximum 5 characters"),
+ ],async (req,res)=>{
 let conn;
+const errors=validationResult(req);
+    if(!errors.isEmpty()){
+        return res.status(400).json({errors:errors.array()});
+    }
 const {name,city} =req.body
 
 try{
@@ -289,7 +306,7 @@ res.status(400).json({error:"Enter values to update"})
 if(result.affectedRows===0){
 res.status(300).json({error:"invalid id, cannot update "});
 }
-else {res.status(200).send(result)}
+else {res.status(200).json(result)}
 
 }
 catch(error){
@@ -316,6 +333,8 @@ finally{
  *              description: Successfully deleted record from table
  *          500:
  *              Server Error
+ *          400:
+ *              Invalid or missing id
  *      parameters:
  *          - name: id
  *            in: path
@@ -325,8 +344,15 @@ finally{
  */
 
 
-app.delete(('/companies/:id'),async (req,res) => {
+app.delete('/companies/:id',[check('id','Company ID is required').not().isEmpty().trim(),
+    check('id').isAlphanumeric().withMessage('   id should only be Alphanumeric').isLength({max:5}).withMessage("Id should have maximum 5 characters")
+],async (req,res) => {
     let conn;
+const errors=validationResult(req);
+    if(!errors.isEmpty()){
+        return res.status(400).json({errors:errors.array()});
+    }
+
     try{
         conn = await pool.getConnection();
         
@@ -354,9 +380,9 @@ app.delete(('/companies/:id'),async (req,res) => {
  * definitions:
  *   Company:
  *     properties:
- *       COMPANY_NAME:
+ *       name:
  *         type: string
- *       COMPANY_CITY:
+ *       city:
  *         type: string 
  */
 
@@ -372,6 +398,8 @@ app.delete(('/companies/:id'),async (req,res) => {
  *              description: Added or Updated data to Company table
  *          500:
  *              Server Error
+ *          400:
+ *              Missing or invalid attribute
  *      parameters:
  *          - name: Company
  *            description: Company object
@@ -386,24 +414,32 @@ app.delete(('/companies/:id'),async (req,res) => {
  */
 
 
-app.put('/company/:id', async (req,res)=>{
+app.put('/company/:id', [ check('id','Company ID is required').not().isEmpty().trim(),
+    check('id').isAlphanumeric()
+    .withMessage('Company Id should only be Alphanumeric').isLength({max:5}).withMessage("Company Id should have maximum 5 characters"),
+    check('name').isAlphanumeric()
+    .withMessage('Company NAME should only be Alphanumeric').isLength({max:30}).withMessage("Company Name should have maximum 30 characters"),
+    check('city').isAlphanumeric()
+    .withMessage('COMPANY CITY should only be Alphanumeric').isLength({max:30}).withMessage("COMPANY CITY should have maximum 30 characters"),
+],async (req,res)=>{
 let conn;
+const errors=validationResult(req);
+    if(!errors.isEmpty()){
+        return res.status(400).json({errors:errors.array()});
+    }
+
 try{    
 const {name,city}=req.body
 conn= await pool.getConnection();    
 var result=0;
 
-if (name && city){
+
 result= await pool.query(`UPDATE company SET COMPANY_NAME='${name}', COMPANY_CITY='${city}' WHERE COMPANY_ID='${req.params.id}'`);
 
 if (result.affectedRows==0){
 result= await pool.query(`INSERT INTO company (COMPANY_ID,COMPANY_NAME,COMPANY_CITY) VALUES ('${req.params.id}','${name}','${city}')`)}
 res.status(200).send("Updated company")
 
-}
-else{
-res.status(500).send("Provide all attributes")
-}
 
 
 }
