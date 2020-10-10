@@ -87,6 +87,18 @@ if (conn) return conn.end();
 
 });
 
+ /**
+ * @swagger
+ * /agents:
+ *    get:
+ *     description: Return agents
+ *     produces:
+ *        -application/json
+ *     responses:
+ *         200:
+ *             description: Object agent
+ */
+
 app.get('/agents',cacheMiddleware(30), async(req,res)=>{
 	let conn;
 	try{
@@ -104,6 +116,17 @@ app.get('/agents',cacheMiddleware(30), async(req,res)=>{
 
 });
 
+/**
+ * @swagger
+ * /foods:
+ *    get:
+ *     description: Return foods
+ *     produces:
+ *        -application/json
+ *     responses:
+ *         200:
+ *             description: Object food
+ */
 app.get('/foods',cacheMiddleware(30), async(req,res)=>{
 	let conn;
 	try{
@@ -121,6 +144,19 @@ app.get('/foods',cacheMiddleware(30), async(req,res)=>{
 
 });
 
+
+ /**
+ * @swagger
+ * /students:
+ *    get:
+ *     description: Return students
+ *     produces:
+ *        -application/json
+ *     responses:
+ *         200:
+ *             description: Object student
+ */
+
 app.get('/student',cacheMiddleware(30), async(req,res)=>{
 	let conn;
 	try{
@@ -136,41 +172,43 @@ app.get('/student',cacheMiddleware(30), async(req,res)=>{
 	if (conn) return conn.end();
 	}
 
-});
-
+})
 
 /**
  * @swagger
  * definitions:
- *     Comapny:
- *       properties:
- *          COMPANY_ID:
- *             	type: string
- *          COMPANY_NAME:
- *              type: string
- *          COMPANY_CITY:
- *              type: string
+ *   Company:
+ *     properties:
+ *       COMPANY_ID:
+ *         type: string
+ *       COMPANY_NAME:
+ *         type: string
+ *       COMPANY_CITY:
+ *         type: string
  */
 /**
  * @swagger
  * /addCompany:
  *    post:
- *     description: Adds a new Company
- *     produces:
- *        -application/json
- *     responses:
- *         200:
- *             description: Added data
- *         500:
+ *      description: add record to food table
+ *      produces:
+ *          - application/json
+ *      responses:
+ *          200:
+ *              description: Added data to food table
+ *          500:
  *              description: Server Error
- *     parameters:
- *        - name:Company
- *          description:company object
- *          in:body
- *          required:True
- *          schema:
- *             $ref:'#/definitions/addCompany'
- */  
+ *      parameters:
+ *          - name: Company
+ *            description: Company object
+ *            in: body
+ *            required: true
+ *            schema:
+ *              $ref: '#/definitions/Company'
+ *
+ */
+
+ 
 app.post('/addCompany',[check('COMPANY_ID','Company ID is required').not().isEmpty().trim(),
                   check('COMPANY_NAME').trim(),
                   check('COMPANY_CITY').trim()],async (req,res)=>{
@@ -194,6 +232,40 @@ finally{
 }
 
 });
+/**
+ * @swagger
+ * definitions:
+ *   Company:
+ *     properties:
+ *       name:
+ *         type: string
+ *       city:
+ *         type: string
+ */
+/**
+ * @swagger
+ * /company/{id}:
+ *    patch:
+ *      description: Update record partially to food table
+ *      produces:
+ *          - application/json
+ *      responses:
+ *          200:
+ *              description: Updated data to food table
+ *          500:
+ *              Server Error
+ *      parameters:
+ *          - name: company
+ *            description: company object
+ *            in: body
+ *            required: true
+ *            schema:
+ *              $ref: '#/definitions/Company'
+ *          - name: id
+ *            in: path
+ *            required: true
+ *            type: string       
+ */
 
 app.patch('/company/:id',async (req,res)=>{
 let conn;
@@ -232,6 +304,86 @@ finally{
 
 });
 
+ /**
+ * @swagger
+ * /companies/{id}:
+ *    delete:
+ *      description: Delete record in Company table
+ *      produces:
+ *          - application/json
+ *      responses:
+ *          200:
+ *              description: Successfully deleted record from table
+ *          500:
+ *              Server Error
+ *      parameters:
+ *          - name: id
+ *            in: path
+ *            required: true
+ *            type: string
+ *
+ */
+
+
+app.delete(('/companies/:id'),async (req,res) => {
+    let conn;
+    try{
+        conn = await pool.getConnection();
+        
+        var query = `DELETE FROM company WHERE COMPANY_ID='${req.params.id}'`;
+        var result = await conn.query(query);
+        
+        if(result.affectedRows == 0){
+            res.status(404).send("Invalid Id")
+        }
+        else{
+            res.status(200).send("Successfully deleted");
+        }
+        
+    }catch (err){
+        console.log(err);
+        throw err;
+    } finally {
+        if (conn) return conn.end();
+    }
+
+})
+
+/**
+ * @swagger
+ * definitions:
+ *   Company:
+ *     properties:
+ *       COMPANY_NAME:
+ *         type: string
+ *       COMPANY_CITY:
+ *         type: string 
+ */
+
+/**
+ * @swagger
+ * /company/{id}:
+ *    put:
+ *      description: add or update a record to Company table
+ *      produces:
+ *          - application/json
+ *      responses:
+ *          200:
+ *              description: Added or Updated data to Company table
+ *          500:
+ *              Server Error
+ *      parameters:
+ *          - name: Company
+ *            description: Company object
+ *            in: body
+ *            required: true
+ *            schema:
+ *              $ref: '#/definitions/Company'
+ *          - name: id
+ *            in: path
+ *            required: true
+ *            type: string 
+ */
 
 
 app.put('/company/:id', async (req,res)=>{
@@ -239,9 +391,20 @@ let conn;
 try{    
 const {name,city}=req.body
 conn= await pool.getConnection();    
-const result= await pool.query(`UPDATE company SET COMPANY_NAME='${name}', COMPANY_CITY='${city}' WHERE COMPANY_ID='${req.params.id}'`);
+var result=0;
 
-console.log(result);
+if (name && city){
+result= await pool.query(`UPDATE company SET COMPANY_NAME='${name}', COMPANY_CITY='${city}' WHERE COMPANY_ID='${req.params.id}'`);
+
+if (result.affectedRows==0){
+result= await pool.query(`INSERT INTO company (COMPANY_ID,COMPANY_NAME,COMPANY_CITY) VALUES ('${req.params.id}','${name}','${city}')`)}
+res.status(200).send("Updated company")
+
+}
+else{
+res.status(500).send("Provide all attributes")
+}
+
 
 }
 catch(error){
